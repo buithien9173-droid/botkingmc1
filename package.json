@@ -1,13 +1,13 @@
 {
   "name": "kingmc-afk-bot",
   "version": "1.0.0",
-  "description": "Bot tu dong hoa KingSMP",
+  "description": "Minimal KingMC AFK bot",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
-    "mineflayer": "^4.20.0",
-    "express": "^4.19.2"
+    "mineflayer": "4.37.1",
+    "express": "4.21.2"
   }
 }
