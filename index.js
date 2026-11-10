@@ -1,46 +1,84 @@
 const mineflayer = require('mineflayer');
+const express = require('express'); 
+const app = express();
+const port = process.env.PORT || 10000;
 
-// Cấu hình tài khoản đăng nhập máy chủ KingMC của bạn
+let logList = []; 
+
+// 1. Giao diện Web hiển thị kèo trên điện thoại/máy tính của bạn
+app.get('/', (req, res) => {
+    let html = `
+    <html>
+    <head>
+        <title>BẢNG SĂN KÈO BLAZE - KINGMC</title>
+        <meta charset="utf-8">
+        <meta http-equiv="refresh" content="5">
+        <style>
+            body { font-family: Arial, sans-serif; background: #121212; color: #fff; padding: 20px; }
+            h1 { color: #ff9900; text-align: center; }
+            .status { text-align: center; font-weight: bold; margin-bottom: 20px; color: #00ff00; }
+            .box { background: #1e1e1e; padding: 15px; border-radius: 8px; max-width: 800px; margin: 0 auto; box-shadow: 0 4px 8px rgba(0,0,0,0.5); }
+            .log-item { border-bottom: 1px solid #333; padding: 10px 0; font-size: 16px; }
+            .time { color: #888; font-size: 12px; margin-right: 10px; }
+            .highlight { color: #ffcc00; font-weight: bold; }
+        </style>
+    </head>
+    <body>
+        <h1>🔥 HỆ THỐNG SĂN KÈO BLAZE KINGMC 🔥</h1>
+        <div class="status">Trạng thái Bot: ĐANG ONLINE & QUÉT CHỢ 24/24</div>
+        <div class="box">
+            <h3>Danh sách đơn hàng quét được (Mới nhất ở trên):</h3>
+            <div id="logs">
+    `;
+    
+    if (logList.length === 0) {
+        html += `<p style="color: #aaa; text-align: center;">Chưa quét được kèo nào. Đang đợi hệ thống /order...</p>`;
+    } else {
+        logList.forEach(item => {
+            html += `<div class="log-item"><span class="time">[${item.time}]</span> <span class="highlight">${item.msg}</span></div>`;
+        });
+    }
+    
+    html += `</div></div></body></html>`;
+    res.send(html);
+});
+
+app.listen(port, () => {
+    console.log(`Cổng Web UI đã mở tại port: ${port}`);
+});
+
+// 2. Kết nối Bot vào cụm game KingSMP
 const BOT_OPTIONS = {
-    host: 'sgp.kingmc.vn', // Địa chỉ IP máy chủ KingMC
+    host: 'sgp.kingmc.vn',
     port: 25565,
-    username: process.env.MC_USERNAME || 'BotKingSMP', // Lấy tên nhân vật từ Environment trên Render
-    version: '1.20.1' // Phiên bản cụm KingSMP yêu cầu
+    username: process.env.MC_USERNAME || 'SnapeBlazeBot',
+    version: '1.20.1'
 };
-
-console.log("=== HỆ THỐNG KHỞI CHẠY BOT MINECRAFT ===");
-console.log(`Đang tiến hành kết nối nhân vật [${BOT_OPTIONS.username}] vào server KingMC...`);
 
 const bot = mineflayer.createBot(BOT_OPTIONS);
 
-// Khi bot đăng nhập thành công vào thế giới game
 bot.on('spawn', () => {
-    console.log(`[THÀNH CÔNG] Nhân vật ${bot.username} đã online trong cụm KingSMP.`);
-    console.log("Bot đang lắng nghe khung chat để quét thông tin đơn hàng Blaze...");
+    console.log(`[SUCCESS] Bot ${bot.username} đã vào cụm KingSMP.`);
 });
 
-// Lắng nghe tất cả tin nhắn xuất hiện trên khung chat của server
 bot.on('chat', (username, message) => {
-    if (username === bot.username) return; // Bỏ qua tin nhắn của chính bot
+    if (username === bot.username) return;
 
-    // Bộ lọc kiểm tra nếu tin nhắn chat chứa từ khóa "Blaze" và hệ thống lệnh mua bán
+    // Bộ lọc quét từ khóa Blaze và Order hàng loạt
     if (message.includes('Blaze') && (message.includes('Order') || message.includes('chợ') || message.includes('Market'))) {
-        console.log(`[PHÁT HIỆN TIN NHẮN CHỢ] Người chơi ${username}: "${message}"`);
+        const timeNow = new Date().toLocaleTimeString('vi-VN');
         
-        // Điều kiện giá trị lọc đặt ra là từ 150$ trở lên
-        const TARGET_PRICE = 150;
-        console.log(`-> Đang kiểm tra bộ lọc giá trị (Yêu cầu đơn hàng >= ${TARGET_PRICE}$)`);
-        
-        // Thêm lệnh xử lý tự động của bạn tại đây
-        // Ví dụ gõ lệnh trong game: bot.chat('/order buy blaze...');
+        logList.unshift({
+            time: timeNow,
+            msg: `Người chơi [${username}]: ${message}`
+        });
+
+        if (logList.length > 50) logList.pop(); // Giới hạn lưu 50 dòng cho nhẹ
+        console.log(`[QUÉT ĐƯỢC KÈO]: ${message}`);
     }
 });
 
-bot.on('error', (err) => {
-    console.error("[LỖI KẾT NỐI] Gặp sự cố mạng:", err.message);
-});
-
 bot.on('end', () => {
-    console.log("[NGẮT KẾT NỐI] Bot đã rời khỏi server. Đang khởi động lại sau 15 giây...");
-    setTimeout(() => { process.exit(1); }, 15000); // Lệnh này giúp Render tự khởi chạy lại bot ngay lập tức
+    console.log("Bot mất kết nối, đang tự khởi động lại...");
+    setTimeout(() => { process.exit(1); }, 10000);
 });
