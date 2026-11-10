@@ -47,15 +47,28 @@ app.listen(port, () => {
     console.log(`Cổng Web UI đã mở tại port: ${port}`);
 });
 
-// 2. Kết nối Bot vào cụm game KingSMP
+// 2. Kết nối Bot vào cụm game KingMC
 const BOT_OPTIONS = {
     host: 'sgp.kingmc.vn',
     port: 25565,
-    username: process.env.MC_USERNAME || 'SnapeBlazeBot',
+    username: process.env.MC_USERNAME || 'thianz26',
     version: '1.20.1'
 };
 
 const bot = mineflayer.createBot(BOT_OPTIONS);
+
+// TỰ ĐỘNG GÕ LỆNH ĐĂNG NHẬP KHI VÀO SERVER
+bot.on('message', (jsonMsg) => {
+    const cleanMessage = jsonMsg.toString();
+    
+    // Nếu hệ thống yêu cầu gõ lệnh /login mật khẩu
+    if (cleanMessage.includes('/login') || cleanMessage.includes('đăng nhập') || cleanMessage.includes('/register')) {
+        console.log("[HỆ THỐNG] Phát hiện yêu cầu đăng nhập. Đang tự động gõ lệnh...");
+        
+        // Thay chữ 'MAT_KHAU_CUA_BAN' bằng mật khẩu game thật của nick thianz26
+        bot.chat('/login dmthglogacc'); 
+    }
+});
 
 bot.on('spawn', () => {
     console.log(`[SUCCESS] Bot ${bot.username} đã vào cụm KingSMP.`);
@@ -73,7 +86,7 @@ bot.on('chat', (username, message) => {
             msg: `Người chơi [${username}]: ${message}`
         });
 
-        if (logList.length > 50) logList.pop(); // Giới hạn lưu 50 dòng cho nhẹ
+        if (logList.length > 50) logList.pop(); 
         console.log(`[QUÉT ĐƯỢC KÈO]: ${message}`);
     }
 });
