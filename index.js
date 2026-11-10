@@ -5,7 +5,6 @@ const port = process.env.PORT || 10000;
 
 let logList = []; 
 
-// 1. Giao diện Web hiển thị kèo trên điện thoại/máy tính của bạn
 app.get('/', (req, res) => {
     let html = `
     <html>
@@ -47,7 +46,6 @@ app.listen(port, () => {
     console.log(`Cổng Web UI đã mở tại port: ${port}`);
 });
 
-// 2. Kết nối Bot vào cụm game KingMC
 const BOT_OPTIONS = {
     host: 'sgp.kingmc.vn',
     port: 25565,
@@ -57,27 +55,30 @@ const BOT_OPTIONS = {
 
 const bot = mineflayer.createBot(BOT_OPTIONS);
 
-// TỰ ĐỘNG GÕ LỆNH ĐĂNG NHẬP KHI VÀO SERVER
+// XỬ LÝ TỰ ĐỘNG ĐĂNG NHẬP VÀ DI CHUYỂN CỤM
 bot.on('message', (jsonMsg) => {
     const cleanMessage = jsonMsg.toString();
     
-    // Nếu hệ thống yêu cầu gõ lệnh /login mật khẩu
-    if (cleanMessage.includes('/login') || cleanMessage.includes('đăng nhập') || cleanMessage.includes('/register')) {
-        console.log("[HỆ THỐNG] Phát hiện yêu cầu đăng nhập. Đang tự động gõ lệnh...");
+    // 1. Nếu hệ thống yêu cầu đăng nhập
+    if (cleanMessage.includes('/login') || cleanMessage.includes('đăng nhập')) {
+        console.log("[HỆ THỐNG] Đang tự động gõ lệnh đăng nhập mật khẩu...");
+        bot.chat('/login dmthglogacc'); // Hãy thay thế MAT_KHAU_THAT_CỦA_BẠN bằng pass thật của bạn
         
-        // Thay chữ 'MAT_KHAU_CUA_BAN' bằng mật khẩu game thật của nick thianz26
-        bot.chat('/login dmthglogacc'); 
+        // 2. Chờ 3 giây sau khi đăng nhập thành công để gõ lệnh vào cụm KingSMP
+        setTimeout(() => {
+            console.log("[HỆ THỐNG] Đang chuyển cụm sang KingSMP...");
+            bot.chat('/kingsmp'); // Hoặc lệnh chuyển cụm chính xác của server (ví dụ /server kingsmp)
+        }, 3000);
     }
 });
 
 bot.on('spawn', () => {
-    console.log(`[SUCCESS] Bot ${bot.username} đã vào cụm KingSMP.`);
+    console.log(`[SUCCESS] Bot ${bot.username} đã kết nối vào máy chủ thành công.`);
 });
 
 bot.on('chat', (username, message) => {
     if (username === bot.username) return;
 
-    // Bộ lọc quét từ khóa Blaze và Order hàng loạt
     if (message.includes('Blaze') && (message.includes('Order') || message.includes('chợ') || message.includes('Market'))) {
         const timeNow = new Date().toLocaleTimeString('vi-VN');
         
@@ -87,11 +88,15 @@ bot.on('chat', (username, message) => {
         });
 
         if (logList.length > 50) logList.pop(); 
-        console.log(`[QUÉT ĐƯỢC KÈO]: ${message}`);
+        console.log(`[QUÉT ĐƯỢC KÈO BLAZE]: ${message}`);
     }
 });
 
+bot.on('error', (err) => {
+    console.error("[LỖI MẠNG]:", err.message);
+});
+
 bot.on('end', () => {
-    console.log("Bot mất kết nối, đang tự khởi động lại...");
-    setTimeout(() => { process.exit(1); }, 10000);
+    console.log("Bot bị ngắt kết nối khỏi server, đang khởi động lại sau 15 giây...");
+    setTimeout(() => { process.exit(1); }, 15000);
 });
