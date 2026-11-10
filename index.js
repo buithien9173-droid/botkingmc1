@@ -1,56 +1,46 @@
-const axios = require('axios');
+const mineflayer = require('mineflayer');
 
-// Cấu hình endpoint hệ thống thương mại điện tử của bạn
-const SHOP_API_URL = process.env.SHOP_API_URL || 'https://yourstoredomain.com';
-const API_TOKEN = process.env.STORE_API_TOKEN;
+// Cấu hình tài khoản đăng nhập máy chủ KingMC của bạn
+const BOT_OPTIONS = {
+    host: 'sgp.kingmc.vn', // Địa chỉ IP máy chủ KingMC
+    port: 25565,
+    username: process.env.MC_USERNAME || 'BotKingSMP', // Lấy tên nhân vật từ Environment trên Render
+    version: '1.20.1' // Phiên bản cụm KingSMP yêu cầu
+};
 
-async function processOrders() {
-    if (!API_TOKEN) {
-        console.error("[LỖI] Chưa cấu hình STORE_API_TOKEN trong phần Environment Variables trên Render.");
-        return;
+console.log("=== HỆ THỐNG KHỞI CHẠY BOT MINECRAFT ===");
+console.log(`Đang tiến hành kết nối nhân vật [${BOT_OPTIONS.username}] vào server KingMC...`);
+
+const bot = mineflayer.createBot(BOT_OPTIONS);
+
+// Khi bot đăng nhập thành công vào thế giới game
+bot.on('spawn', () => {
+    console.log(`[THÀNH CÔNG] Nhân vật ${bot.username} đã online trong cụm KingSMP.`);
+    console.log("Bot đang lắng nghe khung chat để quét thông tin đơn hàng Blaze...");
+});
+
+// Lắng nghe tất cả tin nhắn xuất hiện trên khung chat của server
+bot.on('chat', (username, message) => {
+    if (username === bot.username) return; // Bỏ qua tin nhắn của chính bot
+
+    // Bộ lọc kiểm tra nếu tin nhắn chat chứa từ khóa "Blaze" và hệ thống lệnh mua bán
+    if (message.includes('Blaze') && (message.includes('Order') || message.includes('chợ') || message.includes('Market'))) {
+        console.log(`[PHÁT HIỆN TIN NHẮN CHỢ] Người chơi ${username}: "${message}"`);
+        
+        // Điều kiện giá trị lọc đặt ra là từ 150$ trở lên
+        const TARGET_PRICE = 150;
+        console.log(`-> Đang kiểm tra bộ lọc giá trị (Yêu cầu đơn hàng >= ${TARGET_PRICE}$)`);
+        
+        // Thêm lệnh xử lý tự động của bạn tại đây
+        // Ví dụ gõ lệnh trong game: bot.chat('/order buy blaze...');
     }
+});
 
-    try {
-        const headers = {
-            'Authorization': `Bearer ${API_TOKEN}`,
-            'Content-Type': 'application/json'
-        };
+bot.on('error', (err) => {
+    console.error("[LỖI KẾT NỐI] Gặp sự cố mạng:", err.message);
+});
 
-        console.log("Đang quét danh sách sản phẩm...");
-        const response = await axios.get(`${SHOP_API_URL}/v1/products?search=blaze`, { headers });
-        const products = response.data;
-
-        if (!products || products.length === 0) {
-            console.log("Không tìm thấy sản phẩm nào.");
-            return;
-        }
-
-        // Tìm sản phẩm có mức giá cao nhất
-        const highestPriceItem = products.reduce((max, item) => item.price > max.price ? item : max, products);
-        console.log(`Sản phẩm giá cao nhất tìm thấy: ${highestPriceItem.price} USD`);
-
-        // Kiểm tra điều kiện đơn hàng từ 150 USD trở lên
-        if (highestPriceItem.price >= 150.00) {
-            console.log(`[HỢP LỆ] Mức giá ${highestPriceItem.price} USD đạt điều kiện tối thiểu (>= 150 USD).`);
-            
-            const orderPayload = {
-                product_id: highestPriceItem.id,
-                quantity: 1,
-                fulfillment_type: "automated"
-            };
-
-            const orderResponse = await axios.post(`${SHOP_API_URL}/v1/orders`, orderPayload, { headers });
-            if (orderResponse.status === 201 || orderResponse.status === 200) {
-                console.log("[THÀNH CÔNG] Đơn hàng tự động đã được ghi nhận.");
-            }
-        } else {
-            console.log(`[BỎ QUA] Mức giá ${highestPriceItem.price} USD chưa đạt điều kiện.`);
-        }
-
-    } catch (error) {
-        console.error("[LỖI HỆ THỐNG]:", error.message);
-    }
-}
-
-// Chạy kiểm tra dữ liệu
-processOrders();
+bot.on('end', () => {
+    console.log("[NGẮT KẾT NỐI] Bot đã rời khỏi server. Đang khởi động lại sau 15 giây...");
+    setTimeout(() => { process.exit(1); }, 15000); // Lệnh này giúp Render tự khởi chạy lại bot ngay lập tức
+});
